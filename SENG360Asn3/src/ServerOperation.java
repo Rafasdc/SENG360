@@ -21,7 +21,14 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		super();
 	}
 
-	public String helloTo(String name, SecretKey key, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+	private String decryptKey(byte[] encryptedKey) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
+		Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS5Padding");
+		decrypt.init(Cipher.ENCRYPT_MODE, privateKey);
+		String decryptedKey = new String(decrypt.doFinal(encryptedKey));
+		return decryptedKey;
+	}
+	
+	public String helloTo(String name, byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 	    Cipher aesCipher;
 	    aesCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
 		
