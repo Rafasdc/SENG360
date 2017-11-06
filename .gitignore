@@ -1,6 +1,9 @@
 
 .metadata
 .classpath
+.recommenders
+*.class
 SENG360Asn3/.project
 SENG360Asn3/bin/
 SENG360Asn3/.settings/
+
