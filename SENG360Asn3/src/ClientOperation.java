@@ -4,11 +4,16 @@ import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidKeyException;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Base64;
+import java.util.Scanner;
 
 import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.JOptionPane;
 
 public class ClientOperation extends UnicastRemoteObject implements RMIClientInterface{
@@ -20,8 +25,30 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 
 	private static RMIInterface look_up;
 	static PublicKey serverPublicKey;
+	private static PrivateKey privateKey;
+	public static PublicKey publicKey;
 	static SecretKey macKey;
 	static byte[] macKeyBytes;
+	
+	private static void generateKeys() throws NoSuchAlgorithmException{
+		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+		keyGen.initialize(2048);
+		
+		KeyPair pair = keyGen.generateKeyPair();
+		privateKey = pair.getPrivate();
+		publicKey = pair.getPublic();
+	}
+	
+	private SecretKey decryptKey(byte[] encryptedKey) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
+		Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		decrypt.init(Cipher.PRIVATE_KEY, privateKey);
+		byte[] decodedKey = decrypt.doFinal(encryptedKey);
+		String decoded = new String (decodedKey);
+		byte[] originalKey = Base64.getDecoder().decode(decoded);
+		SecretKey decryptedKey = new SecretKeySpec(originalKey, 0, originalKey.length, "AES");
+		return decryptedKey;
+	}
+	
 	
 	public static byte[] encryptKey(SecretKey key) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 		String ciphertext = Base64.getEncoder().encodeToString(key.getEncoded());
@@ -73,19 +100,18 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 	}
 	
 	@Override
-	public String sendMessageClient(String txt) throws RemoteException {
-		System.out.println("Server requested something");
-		return null;
+	public void sendMessageClient(String txt) throws RemoteException {
+		System.out.println("Server: "+txt);
 	}
 	
 	
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		
-		
-		//Naming.rebind("//localhost/Client", new ClientOperation());
+
 		look_up = (RMIInterface) Naming.lookup("//localhost/MyServer");
 		
 		RMIClientInterface client = new ClientOperation();
+		generateKeys();
 		
 		look_up.registerClient(client);
 		
@@ -93,27 +119,68 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 		serverPublicKey = look_up.getPublicKey();
 		
 		int authenticate = 0;
+		/*
 		while (authenticate != 1){
 			String usr = JOptionPane.showInputDialog("Enter Username:");
 			String pswd = JOptionPane.showInputDialog("Enter Password:");
 			authenticate = look_up.authenticateClient(usr, pswd);
 		}
-		
-		String txt = JOptionPane.showInputDialog("What is your name?");
-		//String txt = "Hello";
-		
+		*/
 		SecretKey key = generateKey();
 		byte[] encodedKey = encryptKey(key);
+		
+		while(true){
+		Scanner sc = new Scanner(System.in);
+		String txt = sc.nextLine();
 		byte [] ciphertext = encryptMessage(txt, key);
 		generateMACKey();
-
+		look_up.sendMessageServerEncrypted(encodedKey, ciphertext);
+		//look_up.sendMessageServerIntegrity(txt, macKeyBytes, generateMACData(txt));
+		}
 
 		
-		//byte[] encryptedKey = encryptKey(encodedKey);
+		
+		
+		
+
+
+
+
 		//String response = look_up.sendMessageServerEncrypted(encodedKey, ciphertext);
-		String response = look_up.sendMessageServerIntegrity(txt, macKeyBytes, generateMACData(txt));
-		System.out.println(response);
-		//JOptionPane.showMessageDialog(null, response);
+
+
+	}
+
+
+	@Override
+	public void sendMessageClientEncrypted(byte[] encryptedKey, byte[] encryptedText)
+			throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException,
+			IllegalBlockSizeException, BadPaddingException {
+		
+	    Cipher aesCipher = Cipher.getInstance("AES");
+	    
+	    SecretKey originalKey = decryptKey(encryptedKey);
+		
+		aesCipher.init(Cipher.DECRYPT_MODE, originalKey);
+		// Decrypt the ciphertext
+	    byte[] cleartext1 = aesCipher.doFinal(encryptedText);
+	    String decryptedText = new String(cleartext1);
+	    
+	    System.out.println("Server: " + decryptedText);
+		
+	}
+
+
+	@Override
+	public void sendMessageClientIntegrity(String txt, byte[] macKey, byte[] macData)
+			throws NoSuchAlgorithmException, InvalidKeyException, RemoteException {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public PublicKey getPublicKey() throws RemoteException {
+		return publicKey;
 	}
 	
 

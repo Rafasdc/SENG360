@@ -10,7 +10,11 @@ import javax.crypto.NoSuchPaddingException;
 
 public interface RMIClientInterface extends Remote {
 
-	public String sendMessageClient(String txt) throws RemoteException;
+	public void sendMessageClient(String txt) throws RemoteException;
 	
+	public void sendMessageClientEncrypted(byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException;
+
+	public void sendMessageClientIntegrity(String txt, byte[] macKey, byte[] macData) throws NoSuchAlgorithmException, InvalidKeyException, RemoteException;
 	
+	public PublicKey getPublicKey() throws RemoteException;
 }

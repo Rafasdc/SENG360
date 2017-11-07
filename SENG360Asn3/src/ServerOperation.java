@@ -11,6 +11,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Scanner;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
@@ -22,7 +23,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	private volatile static RMIClientInterface client;
 	private static PrivateKey privateKey;
 	public static PublicKey publicKey;
-	private boolean clientConnected;
+	static PublicKey clientPublicKey;
 
 	protected ServerOperation() throws RemoteException {
 		super();
@@ -37,8 +38,40 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		SecretKey decryptedKey = new SecretKeySpec(originalKey, 0, originalKey.length, "AES");
 		return decryptedKey;
 	}
+	
+	public static byte[] encryptKey(SecretKey key) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+		String ciphertext = Base64.getEncoder().encodeToString(key.getEncoded());
+		Cipher encryption = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		encryption.init(Cipher.PUBLIC_KEY, clientPublicKey);
+		byte[] encryptedKey = encryption.doFinal(ciphertext.getBytes());
+		return encryptedKey;
+	}	
+	
+	private static SecretKey generateKey() throws NoSuchAlgorithmException{
+		KeyGenerator keygen = KeyGenerator.getInstance("AES");
+		keygen.init(128);
+	    SecretKey aesKey = keygen.generateKey();
+	    return aesKey;
+	}
+	
+	private static byte[] encryptMessage(String text, SecretKey aesKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+	    
+	    Cipher aesCipher = Cipher.getInstance("AES");
+	    
+	    // Initialize the cipher for encryption
+	    aesCipher.init(Cipher.ENCRYPT_MODE, aesKey);
+
+	    // Our cleartext
+	    byte[] cleartext = text.getBytes();
+
+	    // Encrypt the cleartext
+	    byte[] ciphertext = aesCipher.doFinal(cleartext);
+	    return ciphertext;
+	}
+	
+	
 	@Override
-	public String sendMessageServerEncrypted(byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+	public void sendMessageServerEncrypted(byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 	    Cipher aesCipher = Cipher.getInstance("AES");
 	    
 	    SecretKey originalKey = decryptKey(encryptedKey);
@@ -47,13 +80,23 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		// Decrypt the ciphertext
 	    byte[] cleartext1 = aesCipher.doFinal(encryptedText);
 	    String decryptedText = new String(cleartext1);
+	    System.err.println("Client: "+ decryptedText);
 	    
-		System.err.println("receiving secret message : "+ decryptedText);
+	    
+	    Scanner sc = new Scanner(System.in);
+		String txt = sc.nextLine();
 		
-		return "Server says hello";
+		
+		SecretKey key = generateKey();
+		byte[] encodedKey = encryptKey(key);
+		byte[] cipherText = encryptMessage(txt,key);
+		
+		
+		client.sendMessageClientEncrypted(encodedKey, cipherText);
+
 	}
 	
-	public String sendMessageServerIntegrity(String txt, byte[] macKey, byte[] macData) throws NoSuchAlgorithmException, InvalidKeyException, RemoteException{
+	public void sendMessageServerIntegrity(String txt, byte[] macKey, byte[] macData) throws NoSuchAlgorithmException, InvalidKeyException, RemoteException{
 		SecretKeySpec spec = new SecretKeySpec(macKey, "HmacMD5");
 		Mac mac = Mac.getInstance("HmacMd5");
 		
@@ -63,14 +106,16 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		byte [] macCode = mac.doFinal();
 		
 		if (macCode.length != macData.length){
-			return ("ERROR: Integrity check failed, possible intercept");
+			System.out.println("ERROR: Integrity check failed, possible intercept");
 		} else if (!Arrays.equals(macCode, macData)){
-			return ("ERROR: Integrity check failed, possible intercept");
+			System.out.println ("ERROR: Integrity check failed, possible intercept");
 		} else {
-			System.out.println(txt);
+			System.out.println("Client: " + txt);
 		}
-		client.sendMessageClient("hello");
-		return ("SUCCESS: Integrity check passed");
+	    Scanner sc = new Scanner(System.in);
+		String toSend = sc.nextLine();
+		client.sendMessageClient(toSend);
+
 		
 	}
 	
@@ -88,7 +133,8 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	}
 	
 	public void registerClient(RMIClientInterface client) throws RemoteException {
-		this.client = client;
+		ServerOperation.client = client;
+		clientPublicKey = ServerOperation.client.getPublicKey(); 
 	}
 	
 	
@@ -111,10 +157,6 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 			Naming.rebind("//localhost/MyServer", new ServerOperation());            
             System.err.println("Server ready");
             generateKeys();
-
-
-            
-
             
         } catch (Exception e) {
         	System.err.println("Server exception: " + e.toString());
