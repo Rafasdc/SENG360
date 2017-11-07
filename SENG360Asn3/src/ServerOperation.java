@@ -28,7 +28,6 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		decrypt.init(Cipher.PRIVATE_KEY, privateKey);
 		byte[] decodedKey = decrypt.doFinal(encryptedKey);
 		String decoded = new String (decodedKey);
-		System.out.println(decoded);
 		byte[] originalKey = Base64.getDecoder().decode(decoded);
 		SecretKey decryptedKey = new SecretKeySpec(originalKey, 0, originalKey.length, "AES");
 		return decryptedKey;
@@ -44,8 +43,8 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	    byte[] cleartext1 = aesCipher.doFinal(encryptedText);
 	    String decryptedText = new String(cleartext1);
 	    
-		System.err.println(name + " is sending secret message : "+ decryptedText);
-		return "Server says hello to " + name;
+		System.err.println("receiving secret message : "+ decryptedText);
+		return "Server says hello";
 	}
 	
 	public PublicKey getPublicKeyServer() throws RemoteException{
