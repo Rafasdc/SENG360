@@ -7,6 +7,7 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Arrays;
 import java.util.Base64;
 
 import javax.crypto.*;
@@ -16,8 +17,10 @@ import javax.swing.JOptionPane;
 
 public class ServerOperation extends UnicastRemoteObject implements RMIInterface{
 	private static final long serialVersionUID = 1L;
+	private static ClientOperation client;
 	private static PrivateKey privateKey;
 	public static PublicKey publicKey;
+	private boolean clientConnected;
 
 	protected ServerOperation() throws RemoteException {
 		super();
@@ -33,7 +36,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		return decryptedKey;
 	}
 	@Override
-	public String helloTo(String name, byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+	public String sendMessageServerEncrypted(byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 	    Cipher aesCipher = Cipher.getInstance("AES");
 	    
 	    SecretKey originalKey = decryptKey(encryptedKey);
@@ -47,7 +50,26 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		return "Server says hello";
 	}
 	
-	public PublicKey getPublicKeyServer() throws RemoteException{
+	public String sendMessageServerIntegrity(String txt, byte[] macKey, byte[] macData) throws NoSuchAlgorithmException, InvalidKeyException{
+		SecretKeySpec spec = new SecretKeySpec(macKey, "HmacMD5");
+		Mac mac = Mac.getInstance("HmacMd5");
+		
+		mac.init(spec);
+		mac.update(txt.getBytes());
+		
+		byte [] macCode = mac.doFinal();
+		
+		if (macCode.length != macData.length){
+			return ("ERROR: Integrity check failed, possible intercept");
+		} else if (!Arrays.equals(macCode, macData)){
+			return ("ERROR: Integrity check failed, possible intercept");
+		}
+		System.out.println(Arrays.equals(macCode, macData));
+		return ("They match");
+		
+	}
+	
+	public PublicKey getPublicKey() throws RemoteException{
 		return publicKey;
 	}
 	
@@ -65,6 +87,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 			Naming.rebind("//localhost/MyServer", new ServerOperation());            
             System.err.println("Server ready");
             generateKeys();
+
             
         } catch (Exception e) {
         	System.err.println("Server exception: " + e.toString());

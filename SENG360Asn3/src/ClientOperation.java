@@ -13,6 +13,8 @@ import javax.swing.JOptionPane;
 public class ClientOperation {
 	private static RMIInterface look_up;
 	static PublicKey serverPublicKey;
+	static SecretKey macKey;
+	static byte[] macKeyBytes;
 	
 	public static byte[] encryptKey(SecretKey key) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 		String ciphertext = Base64.getEncoder().encodeToString(key.getEncoded());
@@ -44,12 +46,30 @@ public class ClientOperation {
 	    return ciphertext;
 	}
 
+	private static void generateMACKey() throws NoSuchAlgorithmException{
+		KeyGenerator keygen = KeyGenerator.getInstance("HmacMD5");
+		SecretKey macKeyGen = keygen.generateKey();
+		macKey = macKeyGen;
+		byte[] keyBytes = macKey.getEncoded();
+		macKeyBytes = keyBytes;
+	}
+	
+	public static byte[] generateMACData(String txt) throws NoSuchAlgorithmException, InvalidKeyException{
+		Mac mac = Mac.getInstance("HmacMD5");
+		mac.init(macKey);
+		mac.update(txt.getBytes());
+		byte[] macData = mac.doFinal();
+		mac.reset();
+		return macData;
+		
+		
+	}
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		
 		
 		
 		look_up = (RMIInterface) Naming.lookup("//localhost/MyServer");
-		serverPublicKey = look_up.getPublicKeyServer();
+		serverPublicKey = look_up.getPublicKey();
 		//System.out.println(serverPublicKey);
 		String txt = JOptionPane.showInputDialog("What is your name?");
 		//String txt = "Hello";
@@ -57,11 +77,13 @@ public class ClientOperation {
 		SecretKey key = generateKey();
 		byte[] encodedKey = encryptKey(key);
 		byte [] ciphertext = encryptMessage(txt, key);
+		generateMACKey();
 
 
 		
 		//byte[] encryptedKey = encryptKey(encodedKey);
-		String response = look_up.helloTo(txt, encodedKey, ciphertext);
+		//String response = look_up.sendMessageServerEncrypted(encodedKey, ciphertext);
+		String response = look_up.sendMessageServerIntegrity(txt, macKeyBytes, generateMACData(txt));
 		System.out.println(response);
 		//JOptionPane.showMessageDialog(null, response);
 	}
