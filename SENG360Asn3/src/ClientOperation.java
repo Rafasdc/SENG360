@@ -11,13 +11,12 @@ import java.util.Base64;
 import javax.crypto.*;
 import javax.swing.JOptionPane;
 
-public class ClientOperation /*extends UnicastRemoteObject implements RMIClientInterface*/{
-	/*
+public class ClientOperation extends UnicastRemoteObject implements RMIClientInterface{
+	
 	protected ClientOperation() throws RemoteException {
 		super();
-		// TODO Auto-generated constructor stub
 	}
-	*/
+	
 
 	private static RMIInterface look_up;
 	static PublicKey serverPublicKey;
@@ -72,13 +71,26 @@ public class ClientOperation /*extends UnicastRemoteObject implements RMIClientI
 		
 		
 	}
+	
+	@Override
+	public String sendMessageClient(String txt) throws RemoteException {
+		System.out.println("Server requested something");
+		return null;
+	}
+	
+	
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		
 		
 		//Naming.rebind("//localhost/Client", new ClientOperation());
 		look_up = (RMIInterface) Naming.lookup("//localhost/MyServer");
+		
+		RMIClientInterface client = new ClientOperation();
+		
+		look_up.registerClient(client);
+		
+		
 		serverPublicKey = look_up.getPublicKey();
-		//System.out.println(serverPublicKey);
 		
 		int authenticate = 0;
 		while (authenticate != 1){
@@ -103,11 +115,6 @@ public class ClientOperation /*extends UnicastRemoteObject implements RMIClientI
 		System.out.println(response);
 		//JOptionPane.showMessageDialog(null, response);
 	}
-	/*
-	@Override
-	public String sendMessageClient(String txt) throws RemoteException {
-		System.out.println("Server requested something");
-		return null;
-	}
-	*/
+	
+
 }

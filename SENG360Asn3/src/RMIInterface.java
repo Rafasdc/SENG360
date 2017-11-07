@@ -15,4 +15,6 @@ public interface RMIInterface extends Remote {
 	public String sendMessageServerIntegrity(String txt, byte[] macKeyBytes, byte[] generateMACData) throws RemoteException, NoSuchAlgorithmException, InvalidKeyException;
 
 	public int authenticateClient(String usr, String pswd) throws RemoteException;
+	
+	public void registerClient(RMIClientInterface client) throws RemoteException;
 }

@@ -69,6 +69,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		} else {
 			System.out.println(txt);
 		}
+		client.sendMessageClient("hello");
 		return ("SUCCESS: Integrity check passed");
 		
 	}
@@ -85,11 +86,11 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 			return 0;
 		}
 	}
-	/*
+	
 	public void registerClient(RMIClientInterface client) throws RemoteException {
 		this.client = client;
 	}
-	*/
+	
 	
 	private static void generateKeys() throws NoSuchAlgorithmException{
 		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
