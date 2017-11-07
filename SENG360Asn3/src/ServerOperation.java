@@ -24,52 +24,13 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	private static PrivateKey privateKey;
 	public static PublicKey publicKey;
 	static PublicKey clientPublicKey;
+	static SecretKey macKey;
+	static byte[] macKeyBytes;
 
 	protected ServerOperation() throws RemoteException {
 		super();
 	}
 
-	private SecretKey decryptKey(byte[] encryptedKey) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
-		Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		decrypt.init(Cipher.PRIVATE_KEY, privateKey);
-		byte[] decodedKey = decrypt.doFinal(encryptedKey);
-		String decoded = new String (decodedKey);
-		byte[] originalKey = Base64.getDecoder().decode(decoded);
-		SecretKey decryptedKey = new SecretKeySpec(originalKey, 0, originalKey.length, "AES");
-		return decryptedKey;
-	}
-	
-	public static byte[] encryptKey(SecretKey key) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
-		String ciphertext = Base64.getEncoder().encodeToString(key.getEncoded());
-		Cipher encryption = Cipher.getInstance("RSA/ECB/PKCS1Padding");
-		encryption.init(Cipher.PUBLIC_KEY, clientPublicKey);
-		byte[] encryptedKey = encryption.doFinal(ciphertext.getBytes());
-		return encryptedKey;
-	}	
-	
-	private static SecretKey generateKey() throws NoSuchAlgorithmException{
-		KeyGenerator keygen = KeyGenerator.getInstance("AES");
-		keygen.init(128);
-	    SecretKey aesKey = keygen.generateKey();
-	    return aesKey;
-	}
-	
-	private static byte[] encryptMessage(String text, SecretKey aesKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
-	    
-	    Cipher aesCipher = Cipher.getInstance("AES");
-	    
-	    // Initialize the cipher for encryption
-	    aesCipher.init(Cipher.ENCRYPT_MODE, aesKey);
-
-	    // Our cleartext
-	    byte[] cleartext = text.getBytes();
-
-	    // Encrypt the cleartext
-	    byte[] ciphertext = aesCipher.doFinal(cleartext);
-	    return ciphertext;
-	}
-	
-	
 	@Override
 	public void sendMessageServerEncrypted(byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
 	    Cipher aesCipher = Cipher.getInstance("AES");
@@ -112,9 +73,14 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		} else {
 			System.out.println("Client: " + txt);
 		}
+		
+		
 	    Scanner sc = new Scanner(System.in);
 		String toSend = sc.nextLine();
-		client.sendMessageClient(toSend);
+		
+		generateMACKey();
+		client.sendMessageClientIntegrity(toSend, macKeyBytes, generateMACData(toSend));
+		
 
 		
 	}
@@ -138,14 +104,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	}
 	
 	
-	private static void generateKeys() throws NoSuchAlgorithmException{
-		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-		keyGen.initialize(2048);
-		
-		KeyPair pair = keyGen.generateKeyPair();
-		privateKey = pair.getPrivate();
-		publicKey = pair.getPublic();
-	}
+
 	/*
 	public void contactClient() throws RemoteException {
 		client.sendMessageClient("hello");
@@ -167,6 +126,71 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	}
 
 
+	private SecretKey decryptKey(byte[] encryptedKey) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
+		Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		decrypt.init(Cipher.PRIVATE_KEY, privateKey);
+		byte[] decodedKey = decrypt.doFinal(encryptedKey);
+		String decoded = new String (decodedKey);
+		byte[] originalKey = Base64.getDecoder().decode(decoded);
+		SecretKey decryptedKey = new SecretKeySpec(originalKey, 0, originalKey.length, "AES");
+		return decryptedKey;
+	}
+	
+	public static byte[] encryptKey(SecretKey key) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+		String ciphertext = Base64.getEncoder().encodeToString(key.getEncoded());
+		Cipher encryption = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		encryption.init(Cipher.PUBLIC_KEY, clientPublicKey);
+		byte[] encryptedKey = encryption.doFinal(ciphertext.getBytes());
+		return encryptedKey;
+	}	
+	
+	private static SecretKey generateKey() throws NoSuchAlgorithmException{
+		KeyGenerator keygen = KeyGenerator.getInstance("AES");
+		keygen.init(128);
+	    SecretKey aesKey = keygen.generateKey();
+	    return aesKey;
+	}
+	
+	private static byte[] encryptMessage(String text, SecretKey aesKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+	    
+	    Cipher aesCipher = Cipher.getInstance("AES");
+	    
+	    // Initialize the cipher for encryption
+	    aesCipher.init(Cipher.ENCRYPT_MODE, aesKey);
 
+	    // Our cleartext
+	    byte[] cleartext = text.getBytes();
+
+	    // Encrypt the cleartext
+	    byte[] ciphertext = aesCipher.doFinal(cleartext);
+	    return ciphertext;
+	}
+	
+	private static void generateKeys() throws NoSuchAlgorithmException{
+		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+		keyGen.initialize(2048);
+		
+		KeyPair pair = keyGen.generateKeyPair();
+		privateKey = pair.getPrivate();
+		publicKey = pair.getPublic();
+	}
+	
+	/* MAC FUNCTIONS */
+	private static void generateMACKey() throws NoSuchAlgorithmException{
+		KeyGenerator keygen = KeyGenerator.getInstance("HmacMD5");
+		SecretKey macKeyGen = keygen.generateKey();
+		macKey = macKeyGen;
+		byte[] keyBytes = macKey.getEncoded();
+		macKeyBytes = keyBytes;
+	}
+	
+	private static byte[] generateMACData(String txt) throws NoSuchAlgorithmException, InvalidKeyException{
+		Mac mac = Mac.getInstance("HmacMD5");
+		mac.init(macKey);
+		mac.update(txt.getBytes());
+		byte[] macData = mac.doFinal();
+		mac.reset();
+		return macData;
+	}
 
 }
