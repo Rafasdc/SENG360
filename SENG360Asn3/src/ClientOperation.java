@@ -14,11 +14,10 @@ public class ClientOperation {
 	private static RMIInterface look_up;
 	static PublicKey serverPublicKey;
 	
-	public static byte[] encryptKey(String key) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
-		Cipher encryption;
-		encryption = Cipher.getInstance("RSA/ECB/PKCS5Padding");
-		encryption.init(Cipher.ENCRYPT_MODE, serverPublicKey);
-		byte[] encryptedKey = encryption.doFinal(key.getBytes());
+	public static byte[] encryptKey(String ciphertext) throws InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
+		Cipher encryption = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		encryption.init(Cipher.PUBLIC_KEY, serverPublicKey);
+		byte[] encryptedKey = encryption.doFinal(ciphertext.getBytes());
 		return encryptedKey;
 	}
 
@@ -29,21 +28,17 @@ public class ClientOperation {
 		look_up = (RMIInterface) Naming.lookup("//localhost/MyServer");
 		serverPublicKey = look_up.getPublicKeyServer();
 		//System.out.println(serverPublicKey);
-		String txt = JOptionPane.showInputDialog("What is your name?");
-		
-		
-		
+		//String txt = JOptionPane.showInputDialog("What is your name?");
+		String txt = "Hello";
 		
 		KeyGenerator keygen = KeyGenerator.getInstance("AES");
+		keygen.init(128);
 	    SecretKey aesKey = keygen.generateKey();
-
+ 
 	    String encodedKey = Base64.getEncoder().encodeToString(aesKey.getEncoded());
+	    System.out.println(encodedKey);
 	    
-	    
-	    Cipher aesCipher;
-	    
-	    // Create the cipher
-	    aesCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+	    Cipher aesCipher = Cipher.getInstance("AES");
 	    
 	    // Initialize the cipher for encryption
 	    aesCipher.init(Cipher.ENCRYPT_MODE, aesKey);
@@ -63,7 +58,10 @@ public class ClientOperation {
 	    //String firstText = new String (cleartext);
 	    
 	    //System.out.println(firstText);
-			
+
+
+		
+		//byte[] encryptedKey = encryptKey(encodedKey);
 		String response = look_up.helloTo(txt, encryptKey(encodedKey), ciphertext);
 		System.out.println(response);
 		//JOptionPane.showMessageDialog(null, response);

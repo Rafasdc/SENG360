@@ -7,8 +7,10 @@ import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.Base64;
 
 import javax.crypto.*;
+import javax.crypto.spec.SecretKeySpec;
 import javax.swing.JOptionPane;
 
 
@@ -21,19 +23,24 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		super();
 	}
 
-	private String decryptKey(byte[] encryptedKey) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
-		Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS5Padding");
-		decrypt.init(Cipher.ENCRYPT_MODE, privateKey);
-		String decryptedKey = new String(decrypt.doFinal(encryptedKey));
+	private SecretKey decryptKey(byte[] encryptedKey) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
+		Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
+		decrypt.init(Cipher.PRIVATE_KEY, privateKey);
+		byte[] decodedKey = decrypt.doFinal(encryptedKey);
+		String decoded = new String (decodedKey);
+		System.out.println(decoded);
+		byte[] originalKey = Base64.getDecoder().decode(decoded);
+		SecretKey decryptedKey = new SecretKeySpec(originalKey, 0, originalKey.length, "AES");
 		return decryptedKey;
 	}
-	
+	@Override
 	public String helloTo(String name, byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException{
-	    Cipher aesCipher;
-	    aesCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+	    Cipher aesCipher = Cipher.getInstance("AES");
+	    
+	    SecretKey originalKey = decryptKey(encryptedKey);
 		
-		aesCipher.init(Cipher.DECRYPT_MODE, key);
-	    // Decrypt the ciphertext
+		aesCipher.init(Cipher.DECRYPT_MODE, originalKey);
+		// Decrypt the ciphertext
 	    byte[] cleartext1 = aesCipher.doFinal(encryptedText);
 	    String decryptedText = new String(cleartext1);
 	    
@@ -46,7 +53,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	}
 	
 	private static void generateKeys() throws NoSuchAlgorithmException{
-		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("DSA");
+		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
 		keyGen.initialize(2048);
 		
 		KeyPair pair = keyGen.generateKeyPair();
@@ -65,5 +72,10 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
           e.printStackTrace();
         }
 		
+		
 	}
+
+
+
+
 }

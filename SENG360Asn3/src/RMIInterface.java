@@ -8,7 +8,7 @@ import javax.crypto.*;
 
 public interface RMIInterface extends Remote {
 
-    public String helloTo(String name, SecretKey key, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException;
+    public String helloTo(String name, byte[] encryptedKey, byte[] encryptedText) throws RemoteException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException, IllegalBlockSizeException, BadPaddingException;
 
     public PublicKey getPublicKeyServer() throws RemoteException;
 }
