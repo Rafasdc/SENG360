@@ -6,6 +6,7 @@ import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -185,7 +186,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 				while (authenticate != 1){
 					String usr = JOptionPane.showInputDialog("Enter Username:");
 					String pswd = JOptionPane.showInputDialog("Enter Password:");
-					authenticate = 1;
+					authenticate = validateLogin(usr, pswd);
 					tries++;
 					if (tries > 3){
 						System.out.println("Too many incorrect tries... Exiting");
@@ -272,6 +273,35 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		byte[] macData = mac.doFinal();
 		mac.reset();
 		return macData;
+	}
+	
+	/* Login Validator Functions */
+	private static int validateLogin(String usr, String pwd) throws NoSuchAlgorithmException{
+		String correctUsr;
+		String hashedCorrectPwd;
+		
+		
+		MessageDigest sha = MessageDigest.getInstance("SHA-256");
+		sha.update(pwd.getBytes());
+		byte[] bytes = sha.digest();
+		String hashed = Base64.getEncoder().encodeToString(bytes);
+
+		System.out.println(hashed.equals("Gsy/VQsgqJjUfCu+r8uOs/UBrJKTvQJeDQEoG2tNeyM="));
+		
+		if (usr.equals("admin")){
+			System.out.println("User matches");
+			if (bytes.equals(("(kM{#?Ô|+¾¯Ë?³õ¬??½^").getBytes())){
+				return 1;
+			} else {
+				return 0;
+			}
+		} else {
+			return 0;
+		}
+	}
+	
+	private void getLogins(String usr, String pwd){
+		
 	}
 
 }
