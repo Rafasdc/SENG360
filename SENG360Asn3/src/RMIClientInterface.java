@@ -17,4 +17,6 @@ public interface RMIClientInterface extends Remote {
 	public void sendMessageClientIntegrity(String txt, byte[] macKey, byte[] macData) throws NoSuchAlgorithmException, InvalidKeyException, RemoteException;
 	
 	public PublicKey getPublicKey() throws RemoteException;
+	
+	public void sendMessageClientEncryptedIntegrity(byte[] encryptedKey, byte[] encryptedText, byte[] macKey, byte[] macData) throws RemoteException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException;
 }

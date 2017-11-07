@@ -17,4 +17,12 @@ public interface RMIInterface extends Remote {
 	public int authenticateClient(String usr, String pswd) throws RemoteException;
 	
 	public void registerClient(RMIClientInterface client) throws RemoteException;
+	
+	public boolean isConfidentialitySet() throws RemoteException;
+	
+	public boolean isIntegritySet() throws RemoteException;
+	
+	public boolean isAuthenticationSet() throws RemoteException;
+
+	public void sendMessageServerEncryptedIntegrity(byte[] encryptedKey, byte[] encryptedText, byte[] macKey, byte[] macData) throws RemoteException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException;
 }

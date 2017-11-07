@@ -15,6 +15,9 @@ import java.util.Scanner;
 
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
 
 public class ClientOperation extends UnicastRemoteObject implements RMIClientInterface{
@@ -23,13 +26,13 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 		super();
 	}
 	
-
 	private static RMIInterface look_up;
 	static PublicKey serverPublicKey;
 	private static PrivateKey privateKey;
 	public static PublicKey publicKey;
 	static SecretKey macKey;
 	static byte[] macKeyBytes;
+	public static boolean confidentiality, integrity, authentication = false;
 	
 	@Override
 	public void sendMessageClientEncrypted(byte[] encryptedKey, byte[] encryptedText)
@@ -70,6 +73,35 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 		}
 		
 	}
+	
+	public void sendMessageClientEncryptedIntegrity(byte[] encryptedKey, byte[] encryptedText, byte[] macKey, byte[] macData) throws RemoteException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
+		/* First decrypt the text to plaintext */
+		Cipher aesCipher = Cipher.getInstance("AES");
+	    
+	    SecretKey originalKey = decryptKey(encryptedKey);
+		
+		aesCipher.init(Cipher.DECRYPT_MODE, originalKey);
+		// Decrypt the ciphertext
+	    byte[] cleartext1 = aesCipher.doFinal(encryptedText);
+	    String decryptedText = new String(cleartext1);
+
+	    /*Integrity check the decrypted text */
+	    SecretKeySpec spec = new SecretKeySpec(macKey, "HmacMD5");
+		Mac mac = Mac.getInstance("HmacMd5");
+		
+		mac.init(spec);
+		mac.update(decryptedText.getBytes());
+		
+		byte [] macCode = mac.doFinal();
+		
+		if (macCode.length != macData.length){
+			System.out.println("ERROR: Integrity check failed, possible intercept");
+		} else if (!Arrays.equals(macCode, macData)){
+			System.out.println ("ERROR: Integrity check failed, possible intercept");
+		} else {
+			System.out.println("System: " + decryptedText);
+		}
+	}
 
 	@Override
 	public PublicKey getPublicKey() throws RemoteException {
@@ -94,46 +126,111 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 	}
 	
 	
+	
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		
+		for (int i=0; i < args.length; i++){
+			if (args[i].equals("c")){
+				confidentiality = true;
+			} else if (args[i].equals("i")){
+				integrity = true;
+			} else if (args[i].equals("a")){
+				authentication = true;
+			}
+		}
 
 		look_up = (RMIInterface) Naming.lookup("//localhost/MyServer");
 		
+		if (!securityFeaturesMatch()){
+			System.out.println("Security Features: ");
+			printSecurityFeatures();
+			System.out.println("Do not match servers... Exiting");
+			System.exit(0);
+		}
+		
+		
 		RMIClientInterface client = new ClientOperation();
 		generateKeys();
-		
 		look_up.registerClient(client);
-		
-		
 		serverPublicKey = look_up.getPublicKey();
 		
-		int authenticate = 0;
-		/*
-		while (authenticate != 1){
-			String usr = JOptionPane.showInputDialog("Enter Username:");
-			String pswd = JOptionPane.showInputDialog("Enter Password:");
-			authenticate = look_up.authenticateClient(usr, pswd);
+		System.out.println("Connection established with features:");
+		printSecurityFeatures();
+		
+		
+		if (authentication){
+			int authenticate = 0;
+			int tries = 0;
+			while (authenticate != 1){
+				String usr = JOptionPane.showInputDialog("Enter Username:");
+				String pswd = JOptionPane.showInputDialog("Enter Password:");
+				authenticate = look_up.authenticateClient(usr, pswd);
+				tries++;
+				if (tries > 3){
+					System.out.println("Too many incorrect tries... Exiting");
+					System.exit(0);
+				}
+			}
 		}
-		*/
 		SecretKey key = generateKey();
 		byte[] encodedKey = encryptKey(key);
 		
 		System.out.println("Initiate connection with server. Type a message:");
-		while(true){
-		Scanner sc = new Scanner(System.in);
-		String txt = sc.nextLine();
-		byte [] ciphertext = encryptMessage(txt, key);
-		generateMACKey();
-		//look_up.sendMessageServerEncrypted(encodedKey, ciphertext);
-		look_up.sendMessageServerIntegrity(txt, macKeyBytes, generateMACData(txt));
+		while (true){
+			
+			Scanner sc = new Scanner(System.in);
+			String txt = sc.nextLine();
+			
+			if (confidentiality && integrity){
+				generateMACKey();
+				byte [] ciphertext = encryptMessage(txt, key);
+				look_up.sendMessageServerEncryptedIntegrity(encodedKey, ciphertext, macKeyBytes, generateMACData(txt));
+			} else if (confidentiality){
+				byte [] ciphertext = encryptMessage(txt, key);
+				look_up.sendMessageServerEncrypted(encodedKey, ciphertext);
+			} else if (integrity){
+				generateMACKey();
+				look_up.sendMessageServerIntegrity(txt, macKeyBytes, generateMACData(txt));
+			} else {
+				//Send plaintext
+			}
 		}
+		
+
+		
+		
+		
 
 
+		
 
 
 	}
 
-
+	public static void showOptions(){
+		JFrame f = new JFrame("Security Options");
+		JCheckBox confidentiality = new JCheckBox("Confidentiality");
+		confidentiality.setBounds(100,100,150,20);
+		JCheckBox integrity = new JCheckBox("Integrity");
+		integrity.setBounds(100,150,150,20); 
+		JCheckBox authentication = new JCheckBox("Authentication");
+		authentication.setBounds(100,200,150,20); 
+		
+		JButton button = new JButton("Ok");
+		button.setBounds(100,250,150,20);
+		
+		
+		f.add(confidentiality);
+		f.add(integrity);
+		f.add(authentication);
+		f.add(button);
+		f.setSize(400, 400);
+		f.setLayout(null);
+		f.setVisible(true);
+		
+		
+		
+	}
 
 	
 	private static void generateKeys() throws NoSuchAlgorithmException{
@@ -194,6 +291,32 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 		byte[] macData = mac.doFinal();
 		mac.reset();
 		return macData;
+	}
+	
+	/*Check Security Features match */
+	private static boolean securityFeaturesMatch() throws RemoteException{
+		if ((confidentiality && look_up.isConfidentialitySet() || !confidentiality && !look_up.isConfidentialitySet()) &&
+				(integrity && look_up.isIntegritySet() || !integrity && !look_up.isIntegritySet()) && 
+				(authentication && look_up.isAuthenticationSet() || !authentication && !look_up.isAuthenticationSet())){
+			return true;
+		} else {
+			return false;
+		}
+	}
+	
+	private static void printSecurityFeatures(){
+		if (confidentiality){
+			System.out.println("Confidentiality");
+		}
+		if (integrity){
+			System.out.println("Integrity");
+		}
+		if (authentication){
+			System.out.println("Authentication");
+		}
+		if (!confidentiality && ! integrity && ! authentication){
+			System.out.println("None");
+		}
 	}
 
 }
