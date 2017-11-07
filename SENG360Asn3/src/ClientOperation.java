@@ -2,6 +2,7 @@ import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
+import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
@@ -10,7 +11,14 @@ import java.util.Base64;
 import javax.crypto.*;
 import javax.swing.JOptionPane;
 
-public class ClientOperation {
+public class ClientOperation /*extends UnicastRemoteObject implements RMIClientInterface*/{
+	/*
+	protected ClientOperation() throws RemoteException {
+		super();
+		// TODO Auto-generated constructor stub
+	}
+	*/
+
 	private static RMIInterface look_up;
 	static PublicKey serverPublicKey;
 	static SecretKey macKey;
@@ -67,10 +75,17 @@ public class ClientOperation {
 	public static void main(String[] args) throws MalformedURLException, RemoteException, NotBoundException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException {
 		
 		
-		
+		//Naming.rebind("//localhost/Client", new ClientOperation());
 		look_up = (RMIInterface) Naming.lookup("//localhost/MyServer");
 		serverPublicKey = look_up.getPublicKey();
 		//System.out.println(serverPublicKey);
+		int authenticate = 0;
+		while (authenticate != 1){
+			String usr = JOptionPane.showInputDialog("Enter Username:");
+			String pswd = JOptionPane.showInputDialog("Enter Password:");
+			authenticate = look_up.authenticateClient(usr, pswd);
+		}
+		
 		String txt = JOptionPane.showInputDialog("What is your name?");
 		//String txt = "Hello";
 		
@@ -87,4 +102,11 @@ public class ClientOperation {
 		System.out.println(response);
 		//JOptionPane.showMessageDialog(null, response);
 	}
+	/*
+	@Override
+	public String sendMessageClient(String txt) throws RemoteException {
+		System.out.println("Server requested something");
+		return null;
+	}
+	*/
 }

@@ -1,5 +1,7 @@
 import java.rmi.Naming;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.security.InvalidKeyException;
 import java.security.KeyPair;
@@ -17,7 +19,7 @@ import javax.swing.JOptionPane;
 
 public class ServerOperation extends UnicastRemoteObject implements RMIInterface{
 	private static final long serialVersionUID = 1L;
-	private static ClientOperation client;
+	private volatile static RMIClientInterface client;
 	private static PrivateKey privateKey;
 	public static PublicKey publicKey;
 	private boolean clientConnected;
@@ -47,10 +49,11 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	    String decryptedText = new String(cleartext1);
 	    
 		System.err.println("receiving secret message : "+ decryptedText);
+		
 		return "Server says hello";
 	}
 	
-	public String sendMessageServerIntegrity(String txt, byte[] macKey, byte[] macData) throws NoSuchAlgorithmException, InvalidKeyException{
+	public String sendMessageServerIntegrity(String txt, byte[] macKey, byte[] macData) throws NoSuchAlgorithmException, InvalidKeyException, RemoteException{
 		SecretKeySpec spec = new SecretKeySpec(macKey, "HmacMD5");
 		Mac mac = Mac.getInstance("HmacMd5");
 		
@@ -73,6 +76,20 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		return publicKey;
 	}
 	
+	
+	public int authenticateClient(String usr, String pswd) throws RemoteException{
+		if (usr.equals("seng360client") && pswd.equals("12345")){
+			return 1;
+		} else {
+			return 0;
+		}
+	}
+	/*
+	public void registerClient(RMIClientInterface client) throws RemoteException {
+		this.client = client;
+	}
+	*/
+	
 	private static void generateKeys() throws NoSuchAlgorithmException{
 		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
 		keyGen.initialize(2048);
@@ -81,12 +98,20 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		privateKey = pair.getPrivate();
 		publicKey = pair.getPublic();
 	}
+	/*
+	public void contactClient() throws RemoteException {
+		client.sendMessageClient("hello");
+	}
+	*/
 	
 	public static void main(String[] args){
 		try {
 			Naming.rebind("//localhost/MyServer", new ServerOperation());            
             System.err.println("Server ready");
             generateKeys();
+
+
+            
 
             
         } catch (Exception e) {
