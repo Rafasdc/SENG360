@@ -192,7 +192,7 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 				generateMACKey();
 				look_up.sendMessageServerIntegrity(txt, macKeyBytes, generateMACData(txt));
 			} else {
-				//Send plaintext
+				look_up.sendMessageServer(txt);
 			}
 		}
 		

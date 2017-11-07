@@ -124,6 +124,15 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		client.sendMessageClientEncryptedIntegrity(encodedKey, cipherText, macKeyBytes, generateMACData(toSend));
 	}
 	
+	public void sendMessageServer(String txt) throws RemoteException {
+		System.out.println("Client: " + txt);
+		
+		Scanner sc = new Scanner(System.in);
+		String toSend = sc.nextLine();
+		
+		client.sendMessageClient(toSend);
+	}
+	
 	public PublicKey getPublicKey() throws RemoteException{
 		return publicKey;
 	}
@@ -196,6 +205,13 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		
 	}
 
+	/* Key Functions */
+	private static SecretKey generateKey() throws NoSuchAlgorithmException{
+		KeyGenerator keygen = KeyGenerator.getInstance("AES");
+		keygen.init(128);
+	    SecretKey aesKey = keygen.generateKey();
+	    return aesKey;
+	}
 
 	private SecretKey decryptKey(byte[] encryptedKey) throws IllegalBlockSizeException, BadPaddingException, InvalidKeyException, NoSuchAlgorithmException, NoSuchPaddingException{
 		Cipher decrypt = Cipher.getInstance("RSA/ECB/PKCS1Padding");
@@ -215,13 +231,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		return encryptedKey;
 	}	
 	
-	private static SecretKey generateKey() throws NoSuchAlgorithmException{
-		KeyGenerator keygen = KeyGenerator.getInstance("AES");
-		keygen.init(128);
-	    SecretKey aesKey = keygen.generateKey();
-	    return aesKey;
-	}
-	
+	/*Message Encrypt */
 	private static byte[] encryptMessage(String text, SecretKey aesKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
 	    
 	    Cipher aesCipher = Cipher.getInstance("AES");
