@@ -66,9 +66,10 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 			return ("ERROR: Integrity check failed, possible intercept");
 		} else if (!Arrays.equals(macCode, macData)){
 			return ("ERROR: Integrity check failed, possible intercept");
+		} else {
+			System.out.println(txt);
 		}
-		System.out.println(Arrays.equals(macCode, macData));
-		return ("They match");
+		return ("SUCCESS: Integrity check passed");
 		
 	}
 	

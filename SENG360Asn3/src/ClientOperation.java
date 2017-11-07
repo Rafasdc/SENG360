@@ -79,6 +79,7 @@ public class ClientOperation /*extends UnicastRemoteObject implements RMIClientI
 		look_up = (RMIInterface) Naming.lookup("//localhost/MyServer");
 		serverPublicKey = look_up.getPublicKey();
 		//System.out.println(serverPublicKey);
+		
 		int authenticate = 0;
 		while (authenticate != 1){
 			String usr = JOptionPane.showInputDialog("Enter Username:");
