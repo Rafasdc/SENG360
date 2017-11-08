@@ -1,3 +1,7 @@
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.rmi.Naming;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
@@ -17,6 +21,7 @@ import java.util.Scanner;
 import javax.crypto.*;
 import javax.crypto.spec.SecretKeySpec;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
 
 public class ServerOperation extends UnicastRemoteObject implements RMIInterface{
@@ -183,10 +188,14 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 			if (authentication){
 				int authenticate = 0;
 				int tries = 0;
+				final JPanel frame = new JPanel();
 				while (authenticate != 1){
 					String usr = JOptionPane.showInputDialog("Enter Username:");
 					String pswd = JOptionPane.showInputDialog("Enter Password:");
 					authenticate = validateLogin(usr, pswd);
+					if (authenticate != 1){
+						JOptionPane.showMessageDialog(frame, "Incorrect user or password", "Inane error", JOptionPane.ERROR_MESSAGE);
+					}
 					tries++;
 					if (tries > 3){
 						System.out.println("Too many incorrect tries... Exiting");
@@ -276,21 +285,21 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	}
 	
 	/* Login Validator Functions */
-	private static int validateLogin(String usr, String pwd) throws NoSuchAlgorithmException{
-		String correctUsr;
-		String hashedCorrectPwd;
-		
+	private static int validateLogin(String usr, String pwd) throws NoSuchAlgorithmException, IOException{
+		String correctLogin[] = getLogins();
+		String correctUsr = correctLogin[0];
+		String hashedCorrectPwd = correctLogin[1];
+
 		
 		MessageDigest sha = MessageDigest.getInstance("SHA-256");
 		sha.update(pwd.getBytes());
 		byte[] bytes = sha.digest();
-		String hashed = Base64.getEncoder().encodeToString(bytes);
+		String hashedInput = Base64.getEncoder().encodeToString(bytes);
 
-		System.out.println(hashed.equals("Gsy/VQsgqJjUfCu+r8uOs/UBrJKTvQJeDQEoG2tNeyM="));
 		
-		if (usr.equals("admin")){
+		if (usr.equals(correctUsr)){
 			System.out.println("User matches");
-			if (bytes.equals(("(kM{#?Ô|+¾¯Ë?³õ¬??½^").getBytes())){
+			if (hashedInput.equals(hashedCorrectPwd)){
 				return 1;
 			} else {
 				return 0;
@@ -300,7 +309,13 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		}
 	}
 	
-	private void getLogins(String usr, String pwd){
+	private static String[] getLogins() throws IOException{
+		BufferedReader br;
+		br = new BufferedReader(new FileReader("server_auth.txt"));
+		String line = br.readLine();
+		String[] parts = line.split(" ");
+		br.close();
+		return parts;
 		
 	}
 
