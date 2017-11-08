@@ -53,6 +53,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	    
 	    Scanner sc = new Scanner(System.in);
 		String txt = sc.nextLine();
+		sc.close();
 		
 		
 		SecretKey key = generateKey();
@@ -84,6 +85,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		
 	    Scanner sc = new Scanner(System.in);
 		String toSend = sc.nextLine();
+		sc.close();
 		
 		generateMACKey();
 		client.sendMessageClientIntegrity(toSend, macKeyBytes, generateMACData(toSend));
@@ -120,6 +122,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		
 		Scanner sc = new Scanner(System.in);
 		String toSend = sc.nextLine();
+		sc.close();
 		
 		SecretKey key = generateKey();
 		byte[] encodedKey = encryptKey(key);
@@ -135,6 +138,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		
 		Scanner sc = new Scanner(System.in);
 		String toSend = sc.nextLine();
+		sc.close();
 		
 		client.sendMessageClient(toSend);
 	}
@@ -144,9 +148,25 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	}
 	
 	
-	public int authenticateClient(String usr, String pswd) throws RemoteException{
-		if (usr.equals("seng360client") && pswd.equals("12345")){
-			return 1;
+	public int authenticateClient(String usr, String pwd) throws IOException, NoSuchAlgorithmException{
+		String correctLogin[] = getLoginsClient();
+		String correctUsr = correctLogin[0];
+		String hashedCorrectPwd = correctLogin[1];
+
+		
+		MessageDigest sha = MessageDigest.getInstance("SHA-256");
+		sha.update(pwd.getBytes());
+		byte[] bytes = sha.digest();
+		String hashedInput = Base64.getEncoder().encodeToString(bytes);
+
+		
+		if (usr.equals(correctUsr)){
+			System.out.println("User matches");
+			if (hashedInput.equals(hashedCorrectPwd)){
+				return 1;
+			} else {
+				return 0;
+			}
 		} else {
 			return 0;
 		}
@@ -284,9 +304,14 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		return macData;
 	}
 	
-	/* Login Validator Functions */
+	
+	/* 
+	 * 
+	 * Login/Authentication Functions
+	 * 
+	 *  */
 	private static int validateLogin(String usr, String pwd) throws NoSuchAlgorithmException, IOException{
-		String correctLogin[] = getLogins();
+		String correctLogin[] = getLoginsServer();
 		String correctUsr = correctLogin[0];
 		String hashedCorrectPwd = correctLogin[1];
 
@@ -309,7 +334,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		}
 	}
 	
-	private static String[] getLogins() throws IOException{
+	private static String[] getLoginsServer() throws IOException{
 		BufferedReader br;
 		br = new BufferedReader(new FileReader("server_auth.txt"));
 		String line = br.readLine();
@@ -317,6 +342,15 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		br.close();
 		return parts;
 		
+	}
+	
+	private static String[] getLoginsClient() throws IOException{
+		BufferedReader br;
+		br = new BufferedReader(new FileReader("client_auth.txt"));
+		String line = br.readLine();
+		String[] parts = line.split(" ");
+		br.close();
+		return parts;
 	}
 
 }

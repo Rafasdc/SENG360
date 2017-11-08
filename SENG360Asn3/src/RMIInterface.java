@@ -1,3 +1,4 @@
+import java.io.IOException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.security.InvalidKeyException;
@@ -14,7 +15,7 @@ public interface RMIInterface extends Remote {
 
 	public void sendMessageServerIntegrity(String txt, byte[] macKeyBytes, byte[] generateMACData) throws RemoteException, NoSuchAlgorithmException, InvalidKeyException;
 
-	public int authenticateClient(String usr, String pswd) throws RemoteException;
+	public int authenticateClient(String usr, String pswd) throws RemoteException, IOException, NoSuchAlgorithmException;
 	
 	public void registerClient(RMIClientInterface client) throws RemoteException;
 	
