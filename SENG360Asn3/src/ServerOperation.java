@@ -325,7 +325,6 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 
 		
 		if (usr.equals(correctUsr)){
-			System.out.println("User matches");
 			if (hashedInput.equals(hashedCorrectPwd)){
 				return 1;
 			} else {

@@ -20,6 +20,7 @@ import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JPanel;
 
 public class ClientOperation extends UnicastRemoteObject implements RMIClientInterface{
 	
@@ -162,10 +163,14 @@ public class ClientOperation extends UnicastRemoteObject implements RMIClientInt
 		if (authentication){
 			int authenticate = 0;
 			int tries = 0;
+			final JPanel frame = new JPanel();
 			while (authenticate != 1){
 				String usr = JOptionPane.showInputDialog("Enter Username:");
 				String pswd = JOptionPane.showInputDialog("Enter Password:");
 				authenticate = look_up.authenticateClient(usr, pswd);
+				if (authenticate != 1){
+					JOptionPane.showMessageDialog(frame, "Incorrect user or password", "Inane error", JOptionPane.ERROR_MESSAGE);
+				}
 				tries++;
 				if (tries > 3){
 					System.out.println("Too many incorrect tries... Exiting");
