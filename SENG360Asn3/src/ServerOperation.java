@@ -53,7 +53,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	    
 	    Scanner sc = new Scanner(System.in);
 		String txt = sc.nextLine();
-		sc.close();
+
 		
 		
 		SecretKey key = generateKey();
@@ -85,7 +85,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		
 	    Scanner sc = new Scanner(System.in);
 		String toSend = sc.nextLine();
-		sc.close();
+		
 		
 		generateMACKey();
 		client.sendMessageClientIntegrity(toSend, macKeyBytes, generateMACData(toSend));
@@ -122,7 +122,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		
 		Scanner sc = new Scanner(System.in);
 		String toSend = sc.nextLine();
-		sc.close();
+		
 		
 		SecretKey key = generateKey();
 		byte[] encodedKey = encryptKey(key);
@@ -138,7 +138,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		
 		Scanner sc = new Scanner(System.in);
 		String toSend = sc.nextLine();
-		sc.close();
+		
 		
 		client.sendMessageClient(toSend);
 	}
@@ -259,7 +259,16 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 		encryption.init(Cipher.PUBLIC_KEY, clientPublicKey);
 		byte[] encryptedKey = encryption.doFinal(ciphertext.getBytes());
 		return encryptedKey;
-	}	
+	}
+	
+	private static void generateKeys() throws NoSuchAlgorithmException{
+		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
+		keyGen.initialize(2048);
+		
+		KeyPair pair = keyGen.generateKeyPair();
+		privateKey = pair.getPrivate();
+		publicKey = pair.getPublic();
+	}
 	
 	/*Message Encrypt */
 	private static byte[] encryptMessage(String text, SecretKey aesKey) throws NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException, IllegalBlockSizeException, BadPaddingException{
@@ -277,14 +286,7 @@ public class ServerOperation extends UnicastRemoteObject implements RMIInterface
 	    return ciphertext;
 	}
 	
-	private static void generateKeys() throws NoSuchAlgorithmException{
-		KeyPairGenerator keyGen = KeyPairGenerator.getInstance("RSA");
-		keyGen.initialize(2048);
-		
-		KeyPair pair = keyGen.generateKeyPair();
-		privateKey = pair.getPrivate();
-		publicKey = pair.getPublic();
-	}
+
 	
 	/* MAC FUNCTIONS */
 	private static void generateMACKey() throws NoSuchAlgorithmException{
